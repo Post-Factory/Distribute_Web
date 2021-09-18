@@ -36,9 +36,7 @@ import socket
 import pandas as pd
 
 # db 연동
-# root:내비번
 engine = create_engine("mysql://new:new@3.20.99.214:3306/loading_DB")
-
 db_session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
 
 # db Base 클래스 생성 => DB를 가져올 class를 생성함
@@ -50,265 +48,221 @@ connection = engine.connect()
 metadata = Base.metadata
 metadata.create_all(engine)
 
-app = Flask(__name__)
+def change_DB() :
+    schedule_table = db.Table('SCHEDULE', metadata, autoload=True, autoload_with=engine)
+    db_session.query(schedule_table).delete()
+    db_session.commit()
 
-import json
+    storage_table = db.Table('STORAGE', metadata, autoload=True, autoload_with=engine)
+    db_session.query(storage_table).delete()
+    db_session.commit()
 
-with open('static/car_vin.json', 'r+', encoding='utf8') as f:
-    json_data = json.load(f)
+    cargo_table = db.Table('CARGO', metadata, autoload=True, autoload_with=engine)
+    db_session.query(cargo_table).delete()
+    db_session.commit()
 
+    car_num0 = {'K' : '한국'}
+    car_num1 = {'M' : '현대자동차'}
+    car_num2 = {'H' : '승용차', 'J' : '승합차', 'F' : '화물', 'M' : '산타페', 'T' : '제네시스'}
+    car_num3 = {'J' : ['tussan'], 'K' : ['kona'], 'E' : ['sonata'], 'Z' : ['porter2'], 'S' : ['santafe'], 'D' : ['avante', 'i30'],
+                'T' : ['veloster'], 'R' : ['palisade', 'venue'], 'G' : ['G70', 'G80','G90'], 'H' : ['GV80'], 'W' : ['starex'], 'C' : ['ioniq'], 'J':['nexo']}
+    car_num4 = {'2' : ['santafe', 'palisade', 'G90'],'T':'tussan', '5' : ['tussan', 'G70'], 'M' : 'G80', 'L':'G80', 'R' :'G80' , 'C':'i30'}
+    car_num5 = {'4' : '문4개' , '8' : 'SUV', '3' : '문3개'}
+    car_num6 = {'1' : ['일반차량'], '7' : ['스타렉스','포터'], '8' : ['메가트럭', '버스']}
+    car_num7 = {'2':'','3':'','5':'','B':'','C':'','D':'','E':'','F':'','G':'','H':'','L':'','N':'','S':'','V':'','M':''}
+    car_num8 = {'0':'','1':'','2':'','3':'','4':'','5':'','6':'','7':'','8':'','9':'','x':''}
+    car_num9 = {'A' : '2010년식', 'B' :'2011년식', 'C' : '2012년식', 'D' : '2013년식', 'E' :'2014년식', 'F' :'2015년식','G' : '2016년식', 'H' : '2017년식',
+                'J':'2018년식', 'K': '2019년식', 'L' : '2020년식', 'M' : '2021년식', 'N' : '2022년식', 'P' :'2023년식', 'Q' : '2024년식'}
+    car_num10 = {'U' : 'ULSAN'}
 
-def vin_decoder(car_vin):
-    decode_list = []
-    if car_vin[0] in json_data['car_num0'].keys():
-        decode_list.append(json_data['car_num0'][car_vin[0]])
-        # print('국가 :', json_data['car_num0'][car_vin[0]])
-    if car_vin[1] in json_data['car_num1'].keys():
-        decode_list.append(json_data['car_num1'][car_vin[1]])
-        # print('회사 :', json_data['car_num1'][car_vin[1]])
-    if car_vin[2] in json_data['car_num2'].keys():
-        decode_list.append(json_data['car_num2'][car_vin[2]])
-        # print('차량형태 :',json_data['car_num2'][car_vin[2]])
-    if car_vin[3] in json_data['car_num3'].keys():
-        decode_list.append(json_data['car_num3'][car_vin[3]])
-        # print('차종류 :',json_data['car_num3'][car_vin[3]])
-        if type(json_data['car_num3'][car_vin[3]]) == list:
-            if car_vin[4] in json_data['car_num4'].keys():
-                try:
-                    car = set([json_data['car_num4'][car_vin[4]]]).intersection(set(json_data['car_num3'][car_vin[3]]))
-                except:
-                    car = set(json_data['car_num3'][car_vin[3]]).intersection(list(json_data['car_num4'][car_vin[4]]))
-                try:
-                    decode_list.append(list(car)[0])
-                except:
-                    num = random.randrange(len(car_num3[car_vin[3]]))
-                    decode_list.append(car_num3[car_vin[3]][num])
-            else :
-                num = random.randrange(len(car_num3[car_vin[3]]))
-                decode_list.append(car_num3[car_vin[3]][num])
-    if car_vin[5] in json_data['car_num5'].keys():
-        decode_list.append(json_data['car_num5'][car_vin[5]])
-        # print(json_data['car_num5'][car_vin[5]])
-    if car_vin[6] in json_data['car_num6'].keys():
-        decode_list.append(json_data['car_num6'][car_vin[6]])
-        # print('차량형태:', json_data['car_num6'][car_vin[6]])
-    if car_vin[7] in json_data['car_num7'].keys():
-        decode_list.append(json_data['car_num7'][car_vin[7]])
-        # print('차정보1 : ', json_data['car_num7'][car_vin[7]])
-    if car_vin[8] in json_data['car_num8'].keys():
-        decode_list.append(json_data['car_num8'][car_vin[8]])
-        # print(json_data['car_num8'][car_vin[8]])
-    if car_vin[9] in json_data['car_num9'].keys():
-        decode_list.append(json_data['car_num9'][car_vin[9]])
-        # print(json_data['car_num9'][car_vin[9]])
-    if car_vin[10] in json_data['car_num10'].keys():
-        decode_list.append(json_data['car_num10'][car_vin[10]])
-        # print('제조공장 :',json_data['car_num10'][car_vin[10]])
-    return decode_list
+    def vin_decoder(car_vin):
+        decode_list = []
+        if car_vin[0] in car_num0.keys():
+            decode_list.append(car_num0[car_vin[0]])
+        if car_vin[1] in car_num1.keys():
+            decode_list.append(car_num1[car_vin[1]])
+        if car_vin[2] in car_num2.keys():
+            decode_list.append(car_num2[car_vin[2]])
+        if car_vin[3] in car_num3.keys():
+            decode_list.append(car_num3[car_vin[3]])
+            if type(car_num3[car_vin[3]]) == list:
+                if car_vin[4] in car_num4.keys():
+                    try :
+                        car = set([car_num4[car_vin[4]]]).intersection(set(car_num3[car_vin[3]]))
+                    except :
+                        car = set(car_num3[car_vin[3]]).intersection(list(car_num4[car_vin[4]]))
+                    try :
+                        decode_list.append(list(car)[0])
+                    except :
+                        num = random.randrange(len(car_num3[car_vin[3]]))
+                        decode_list.append(car_num3[car_vin[3]][num])
+        if car_vin[5] in car_num5.keys():
+            decode_list.append(car_num5[car_vin[5]])
+        if car_vin[6] in car_num6.keys():
+            decode_list.append(car_num6[car_vin[6]])
+        if car_vin[7] in car_num7.keys():
+            decode_list.append(car_num7[car_vin[7]])
+        if car_vin[8] in car_num8.keys():
+            decode_list.append(car_num8[car_vin[8]])
+        if car_vin[9] in car_num9.keys():
+            decode_list.append(car_num9[car_vin[9]])
+        if car_vin[10] in car_num10.keys():
+            decode_list.append(car_num10[car_vin[10]])
+        return decode_list
 
-# 로그인 페이지
-@app.route('/')
-def login_page():
-    return render_template('login.html')
+    import random
 
-# 메인 페이지
-@app.route('/main')
-def index():
-    return render_template('index.html')
+    position = [car_num0, car_num1, car_num2, car_num3, car_num4, car_num5, car_num6, car_num7, car_num8, car_num9,
+                car_num10]
+    car_vin_list = []
 
-@app.route('/camera')
-def camera():
-    return redirect('http://localhost:4997/camera')
+    for i in range(1000):
+        car_vin = ''
+        for i in range(17):
+            if i < 11:
+                num = random.randrange(len(position[i].keys()))
+                car_vin += list(position[i].keys())[num]
+            else:
+                num = random.randrange(10)
+                car_vin += str(num)
 
-@app.route('/camera_result')
-def camera_result():
-    return render_template('camera_result.html')
+        car_vin_list.append(car_vin)
 
-@app.route('/image_send')
-def image_send() :
-    image_df = pd.read_sql(sql='select * from TEMP', con=engine)
-    img_str = image_df['IMAGE'].values[0]
-    car_vin = image_df['IMAGE_NAME'].values[0]
+    storage_car = car_vin_list[:800]
+    cargo_car = car_vin_list[800:]
 
-    img = base64.decodestring(img_str)
+    # STORAGE INSERT
+    print("Storage insert Start")
+    import random
+    import pandas as pd
 
-    im = Image.open(BytesIO(img))
+    phonenums = ['71646177', '76177745', '22433324', '40598151', '77510957', '35106585']
 
-    numpy_image = np.array(im)
-    opencv_image = cv2.cvtColor(numpy_image, cv2.COLOR_RGB2BGR)
+    ip = []
+    for i in range(6):
+        ip_address = str(random.randrange(256)) + '.' + str(random.randrange(256)) + '.' + str(
+            random.randrange(256)) + '.' + str(random.randrange(256))
+        ip.append(ip_address)
+
+    inspect_time = []
+    now = time.localtime()
+
+    for i in range(80):
+        temp_time = str(now.tm_year) + '-'+str(now.tm_mon) + '-' + str(random.randrange(1, now.tm_mday)) + ' ' + str(random.randrange(now.tm_hour)) + ':' + str(random.randrange(now.tm_min)) + ':00'
+        inspect_time.append(temp_time)
+
+    storage_data = {'CARGO_VIN': [], 'CARGO_NAME': [], 'INSPECT_TIME': [], 'IP': [], 'LI_PHONENUM': []}
+    for i in storage_car:
+        cargoname = vin_decoder(i)
+        #     print(cargoname[4])
+
+        storage_data['CARGO_VIN'].append(i)
+        storage_data['CARGO_NAME'].append(cargoname[4])
+        storage_data['INSPECT_TIME'].append(inspect_time[random.randrange(len(inspect_time))])
+        storage_data['IP'].append(ip[random.randrange(len(ip))])
+        storage_data['LI_PHONENUM'].append(phonenums[random.randrange(len(phonenums))])
+
+    storage_df = pd.DataFrame(storage_data)
+
+    import pymysql
+    pymysql.install_as_MySQLdb()
+
+    storage_df.to_sql(name='STORAGE',con=engine, if_exists='append',index=False)
+    print("Storage insert End")
+
+    # CARGO INSERT
+    print("Cargo insert Start")
+    import random
+    import pandas as pd
+
+    import sqlalchemy
+    from sqlalchemy import text
+
+    phonenums = ['71646177', '76177745', '22433324', '40598151', '77510957', '35106585']
+
+    ip = []
+    for i in range(6):
+        ip_address = str(random.randrange(256)) + '.' + str(random.randrange(256)) + '.' + str(
+            random.randrange(256)) + '.' + str(random.randrange(256))
+        ip.append(ip_address)
 
     now = time.localtime()
-    s = '%04d-%02d-%02d-%02d-%02d-%02d' % (
-        now.tm_year, now.tm_mon, now.tm_mday, now.tm_hour, now.tm_min, now.tm_sec)
-    file_path = 'image/check_' + s + '.jpg'
+    for i in range(80):
+        temp_time = str(now.tm_year) + '-'+str(now.tm_mon) + '-' + str(random.randrange(1, now.tm_mday)) + ' ' + str(random.randrange(now.tm_hour)) + ':' + str(random.randrange(now.tm_min)) + ':00'
+        inspect_time.append(temp_time)
 
-    directory = 'static/image'
+    vessel_name = ['GLOVIS PRIME', 'GLOVIS SIGMA']
 
-    if not os.path.exists(directory):
-        os.makedirs(directory)
+    cargo_data = {'CARGO_VIN': [], 'VESSEL_NAME': [], 'CARGO_NAME': [], 'CARGO_WEIGHT': [], 'CARGO_INSPECT_TIME': [],'IP': [], 'LI_PHONENUM': [], 'DECK': [], 'HOLD': []}
 
-    # 파일 저장 시간.jpg는 매번 바뀌는 이미지, check.jpg는 저장할 수 있는 이미지
-    cv2.imwrite('static/' + file_path, opencv_image)
-    cv2.imwrite('static/image/check.jpg', opencv_image)
-
-    time.sleep(1)
-
-    temp_table = sqlalchemy.Table('TEMP', metadata, autoload=True, autoload_with=engine)
-    db_session.query(temp_table).delete()
-    db_session.commit()
-
-    return render_template('camera_result.html', image_file=file_path, text=car_vin)
-
-@app.route('/del')
-def del_img():  # 이미지 삭제
-    import os
-    path_dir = 'static/image'
-    file_list = os.listdir(path_dir)
-    for filename in file_list:
-        file_path = path_dir + '/' + filename
-        os.remove(file_path)
-    return flask.redirect(flask.url_for('camera'))
-
-
-@app.route('/save', methods=['GET', 'POST'])
-def save_img():  # 이미지 저장
-    import os
-    img = cv2.imread('static/image/check.jpg')
-
-    if request.method == 'POST' :
-        # print("post")
-        cargo_vin = request.form['vin']
-        # print(cargo_vin)
-
-    # file_path = 'static/complete/' + str(cargo_vin) + '.jpg'
-    # cv2.imwrite(file_path, img)
-
-    ip = request.environ.get('HTTP_X_REAL_IP', request.remote_addr)
-    login_table = sqlalchemy.Table('LOGIN', metadata, autoload=True, autoload_with=engine)
-    f_s = db_session.query(login_table).filter(text("IP=:ip")).params(ip=ip).all()[0][-1]
-
-    # try:
-    if f_s == '1차' :
-        # db 저장
-        decode_list = vin_decoder(cargo_vin)
-        car_name = decode_list[4]
-        print(car_name)
-
-        now = time.localtime()
-        now_time = "%04d/%02d/%02d %02d:%02d:%02d" % (now.tm_year, now.tm_mon, now.tm_mday, now.tm_hour, now.tm_min, now.tm_sec)
-
-        phoneNum = db_session.query(login_table).filter(text("IP=:ip")).params(ip=ip).all()[0][0]
-
-        table = db.Table('STORAGE', metadata, autoload=True, autoload_with=engine)
-        query = db.insert(table).values(CARGO_VIN=cargo_vin,CARGO_NAME=car_name,INSPECT_TIME=now_time,IP=ip,LI_PHONENUM=phoneNum)
-        result_proxy = connection.execute(query)
-        result_proxy.close()
-
-        # temp 폴더 내 파일 제거
-        path_dir = 'static/image'
-        file_list = os.listdir(path_dir)
-        for filename in file_list:
-            file_path = path_dir + '/' + filename
-            os.remove(file_path)
-
-        return flask.redirect(flask.url_for('camera'))
-
-    else :
-        im = Image.fromarray(img)
-        im.save(buffer, format='jpeg')
-        img_str = base64.b64encode(buffer.getvalue())
-
-        img_df = pd.DataFrame({'IMAGE_NAME': cargo_vin, 'IMAGE': [img_str]})
-
-        img_df.to_sql('IMAGE', con=engine, if_exists='append', index=False)
-
-        # db 저장
-        decode_list = vin_decoder(cargo_vin)
-        car_name = decode_list[4]
-        print(car_name)
+    for i in cargo_car:
+        cargoname = vin_decoder(i)
+        #     print(cargoname[4])
 
         car_table = sqlalchemy.Table('CAR', metadata, autoload=True, autoload_with=engine)
-        cargo_weight = db_session.query(car_table).filter(text("CAR_NAME=:car_name")).params(car_name=car_name).all()[0][1]
+        cargo_weight = db_session.query(car_table).filter(text("CAR_NAME=:car_name")).params(car_name=cargoname[4]).all()[0][1]
 
-        now = time.localtime()
-        now_time = "%04d/%02d/%02d %02d:%02d:%02d" % (
-        now.tm_year, now.tm_mon, now.tm_mday, now.tm_hour, now.tm_min, now.tm_sec)
+        cargo_data['CARGO_VIN'].append(i)
+        cargo_data['VESSEL_NAME'].append(vessel_name[random.randrange(len(vessel_name))])
+        cargo_data['CARGO_NAME'].append(cargoname[4])
+        cargo_data['CARGO_WEIGHT'].append(cargo_weight)
+        cargo_data['CARGO_INSPECT_TIME'].append(inspect_time[random.randrange(len(inspect_time))])
+        cargo_data['IP'].append(ip[random.randrange(len(ip))])
+        cargo_data['LI_PHONENUM'].append(phonenums[random.randrange(len(phonenums))])
+        cargo_data['DECK'].append(random.randrange(1, 12))
+        cargo_data['HOLD'].append(random.randrange(1, 5))
 
-        phoneNum = db_session.query(login_table).filter(text("IP=:ip")).params(ip=ip).all()[0][0]
-        deck = db_session.query(login_table).filter(text("IP=:ip")).params(ip=ip).all()[0][5]
-        hold = db_session.query(login_table).filter(text("IP=:ip")).params(ip=ip).all()[0][4]
-        vessel_name = db_session.query(login_table).filter(text("IP=:ip")).params(ip=ip).all()[0][6]
+    cargo_df = pd.DataFrame(cargo_data)
 
-        table = db.Table('CARGO', metadata, autoload=True, autoload_with=engine)
-        query = db.insert(table).values(CARGO_VIN=cargo_vin, VESSEL_NAME=vessel_name,
-                                        CARGO_NAME=car_name, CARGO_WEIGHT=cargo_weight, CARGO_INSPECT_TIME=now_time,
-                                        IP=ip, LI_PHONENUM=phoneNum, DECK=deck, HOLD=hold)
-        result_proxy = connection.execute(query)
-        result_proxy.close()
+    cargo_df.to_sql(name='CARGO',con=engine, if_exists='append',index=False)
+    print("Cargo Insert End")
 
-        storage_table = sqlalchemy.Table('STORAGE', metadata, autoload=True, autoload_with=engine)
+    # INSERT SCHEDULE
+    print("SCHEDULE insert Start")
+    now = time.localtime()
+    import_time = str(now.tm_year) + '-' + str(now.tm_mon) + '-' + str(now.tm_mday) + ' ' + str(now.tm_hour) + ':' + str(now.tm_min) + ':00'
+    if (int(now.tm_hour) + 12) >= 24:
+        hour = (int(now.tm_hour) + 12) - 24
+        export_time = str(now.tm_year) + '-' + str(now.tm_mon) + '-' + str(int(now.tm_mday)+1) + ' ' + str(hour) + ':' + str(now.tm_min) + ':00'
+    else :
+        export_time = str(now.tm_year) + '-' + str(now.tm_mon) + '-' + str(now.tm_mday) + ' ' + str(int(now.tm_hour)+12) + ':' + str(now.tm_min) + ':00'
+    vessel_name = 'GLOVIS PRIME'
+    schedule_ton = 400
 
-        db_session.query(storage_table).filter(text("CARGO_VIN=:cargo_vin")).params(cargo_vin=cargo_vin).delete()
-        db_session.commit()
+    print(import_time, export_time, vessel_name, schedule_ton)
+    schedule_table = db.Table('SCHEDULE', metadata, autoload=True, autoload_with=engine)
+    query = db.insert(schedule_table).values(SCHEDULE_IMPORT=import_time, SCHEDULE_EXPORT=export_time, VESSEL_NAME=vessel_name, SCHEDULE_TON=schedule_ton)
+    result_proxy = connection.execute(query)
+    result_proxy.close()
+    print("SCHEDULE insert End")
 
-        # temp 폴더 내 파일 제거
-        path_dir = 'static/image'
-        file_list = os.listdir(path_dir)
-        for filename in file_list:
-            file_path = path_dir + '/' + filename
-            os.remove(file_path)
-
-        return flask.redirect(flask.url_for('camera'))
-
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST' :
-        # print("post")
-        user_company = request.form['user_company']
-        user_name = request.form['user_name']
-        user_phoneNum = request.form['user_phoneNum']
-        f_s = request.form = request.form['first_second']
-
-        if len(user_company) == 0 or len(user_name) == 0 or len(user_phoneNum) == 0 or len(f_s) == 0 :
-            return flask.redirect(flask.url_for('login_page'))
-
-        else :
-            # print("else")
-            try :
-                print(request.environ.get('HTTP_X_REAL_IP', request.remote_addr))
-                table = db.Table('LOGIN', metadata, autoload=True, autoload_with=engine)
-                query = db.insert(table).values(LI_PHONENUM=user_phoneNum, LI_NAME=user_name, LI_UNLOADING=user_company, IP=request.environ.get('HTTP_X_REAL_IP', request.remote_addr), F_S=f_s)
-                result_proxy = connection.execute(query)
-                # print(user_phoneNum, user_name, user_company, socket.gethostbyname(socket.gethostname()))
-                result_proxy.close()
-
-                if f_s == '1차' :
-                    return flask.redirect(flask.url_for('camera'))
-                else:
-                    return flask.redirect(flask.url_for('index'))
-
-            except :
-                return flask.redirect(flask.url_for('login_page'))
-
-    elif request.method == 'GET' :
-        # print("get")
-        return flask.redirect(flask.url_for('login_page'))
-
-@app.route('/logout')
-def logout() :
-    ip = request.environ.get('HTTP_X_REAL_IP', request.remote_addr)
-
-    login_table = sqlalchemy.Table('LOGIN', metadata, autoload=True, autoload_with=engine)
-
-    db_session.query(login_table).filter(text("IP=:ip")).params(ip=ip).delete()
-    db_session.commit()
-
-    return flask.redirect(flask.url_for('login_page'))
+app = Flask(__name__)
 
 #실시간 정보공유 페이지
-@app.route('/total')
+@app.route('/')
 def total():
+    date = datetime.datetime
+    # print(date.now())
+    try :
+        schedule_table = sqlalchemy.Table('SCHEDULE', metadata, autoload=True, autoload_with=engine)
+        import_time = db_session.query(schedule_table).all()[0][0]
+        export_time = db_session.query(schedule_table).all()[0][1]
 
+        # print(import_time, export_time)
+
+        if date.now() < import_time or date.now() > export_time :
+            # print("if문")
+            change_DB()
+            time.sleep(2)
+    except :
+        # print("except")
+        change_DB()
+        time.sleep(2)
+
+    # schedule_table = sqlalchemy.Table('SCHEDULE', metadata, autoload=True, autoload_with=engine)
+    # import_time = db_session.query(schedule_table).all()[0][0]
+    # export_time = db_session.query(schedule_table).all()[0][1]
+    # # print(import_time, export_time)
     worker_table = sqlalchemy.Table('WORKER', metadata, autoload=True, autoload_with=engine)
 
     try :
@@ -322,7 +276,7 @@ def total():
         lashing = 0
 
     cargo_table = sqlalchemy.Table('CARGO', metadata, autoload=True, autoload_with=engine)
-    data = db_session.query(cargo_table).order_by(text("CARGO_INSPECT_TIME")).all()[:6]
+    data = db_session.query(cargo_table).order_by(text("CARGO_INSPECT_TIME desc")).all()[:6]
     # print(data)
 
     date = datetime.datetime
@@ -350,10 +304,10 @@ def total():
         # print(schedule_list)
 
         limit_time = export_time[0] - date.now()
-        print(limit_time)
+        # print(limit_time)
 
         hour, minute, second = str(limit_time).split(':')
-        print(hour, minute, second)
+        # print(hour, minute, second)
         return render_template('total.html', checker=checker,driver=driver,lashing=lashing,data=data,hour=hour,minute=minute,second=second,vessel_name=vessel_name,deck=deck,total_num=total_num,date=datetime.date.today())
     
     except :
@@ -364,15 +318,15 @@ def total():
 @app.route('/hol_dec_send', methods=['GET','POST'])
 def hol_dec_send() :
     if request.method == 'POST' :
-        # print("post")
-
-        hold = request.form['hold']
-        deck = request.form['deck']
-
-        login_table = db.Table('LOGIN', metadata, autoload=True, autoload_with=engine)
-        ip = request.environ.get('HTTP_X_REAL_IP', request.remote_addr)
-        db_session.query(login_table).filter(text("IP=:ip")).params(ip=ip).update({'DECK':deck, 'HOLD':hold}, synchronize_session=False)
-        db_session.commit()
+        # # print("post")
+        #
+        # hold = request.form['hold']
+        # deck = request.form['deck']
+        #
+        # login_table = db.Table('LOGIN', metadata, autoload=True, autoload_with=engine)
+        # ip = request.environ.get('HTTP_X_REAL_IP', request.remote_addr)
+        # db_session.query(login_table).filter(text("IP=:ip")).params(ip=ip).update({'DECK':deck, 'HOLD':hold}, synchronize_session=False)
+        # db_session.commit()
 
         return flask.redirect(flask.url_for('total'))
 
@@ -382,14 +336,14 @@ def hol_dec_send() :
 @app.route('/vessel_send', methods=['GET','POST'])
 def vessel_send() :
     if request.method == 'POST' :
-        # print("post")
-
-        vessel_name = request.form['vessel']
-
-        login_table = db.Table('LOGIN', metadata, autoload=True, autoload_with=engine)
-        ip = request.environ.get('HTTP_X_REAL_IP', request.remote_addr)
-        db_session.query(login_table).filter(text("IP=:ip")).params(ip=ip).update({'VESSEL_NAME':vessel_name}, synchronize_session=False)
-        db_session.commit()
+        # # print("post")
+        #
+        # vessel_name = request.form['vessel']
+        #
+        # login_table = db.Table('LOGIN', metadata, autoload=True, autoload_with=engine)
+        # ip = request.environ.get('HTTP_X_REAL_IP', request.remote_addr)
+        # db_session.query(login_table).filter(text("IP=:ip")).params(ip=ip).update({'VESSEL_NAME':vessel_name}, synchronize_session=False)
+        # db_session.commit()
 
         return flask.redirect(flask.url_for('total'))
 
@@ -439,67 +393,14 @@ def worker_send() :
     else :
         return flask.redirect(flask.url_for('worker'))
 
-# 스케쥴 페이지
-@app.route('/table')
-def table():
-    return render_template('table.html')
-
 @app.route('/info')
 def info():
     return render_template('info.html')
-
-@app.route('/cal')
-def cal3():
-    return render_template('schedule.html')
-
-@app.route('/schedule', methods=['GET', 'POST'])
-def schedule() :
-    # print("in")
-    if request.method == 'POST':
-        schedule_import = request.form['schedule_import']
-        schedule_export = request.form['schedule_export']
-        vessel_name = request.form['vessel_name']
-        schedule_ton = request.form['schedule_ton']
-
-        # print(type(schedule_ton), type(schedule_export), type(schedule_import), type(vessel_name))
-        if len(schedule_import) == 0 or len(schedule_export) == 0 or len(vessel_name) == 0 :
-            return flask.redirect(flask.url_for('cal3'))
-        else :
-            # print("else")
-            # try :
-            table = db.Table('SCHEDULE', metadata, autoload=True, autoload_with=engine)
-            query = db.insert(table).values(SCHEDULE_IMPORT=schedule_import, SCHEDULE_EXPORT=schedule_export, VESSEL_NAME=vessel_name, SCHEDULE_TON=schedule_ton)
-            result_proxy = connection.execute(query)
-            result_proxy.close()
-            return flask.redirect(flask.url_for('cal3'))
-    elif request.method == 'GET' :
-        # print("get")
-        return flask.redirect(flask.url_for('cal3'))
 
 @app.route('/worker')
 def worker():
     return render_template('worker.html')
 
-@app.route('/deck')
-def deck() :
-    car_sql = 'select * from CAR'
-    car_df = pd.read_sql(car_sql, con=connection)
-    car_name = list(car_df['CAR_NAME'])
-    print(car_name)
-    # car_table = sqlalchemy.Table('cargo', metadata, autoload=True, autoload_with=engine)
-    cargo_table = sqlalchemy.Table('CARGO', metadata, autoload=True, autoload_with=engine)
-    # car_count_dic = {}
-    car = [[0 for col in range(4)] for row in range(11)]
-    for i in range(11) :
-        for j in range(4) :
-            for k in car_name :
-                car_count = len(db_session.query(cargo_table).filter(text("DECK=:deck_num")).params(deck_num=i).filter(text("HOLD=:hold_num")).params(hold_num=j).filter(text("CARGO_NAME=:car_name")).params(car_name=k).all())
-                if car_count > 0 :
-                    car[i][j] = {k:car_count}
-
-    # print(car_count_dic)
-    return render_template('deck.html', car=car)
-
-
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=4997, debug=True)
+    # app.run(host='0.0.0.0', port=4997, debug=True)
+    app.run('localhost', 4997, debug=True)
